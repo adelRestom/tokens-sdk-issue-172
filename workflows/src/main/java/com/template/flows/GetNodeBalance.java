@@ -53,7 +53,7 @@ public class GetNodeBalance extends FlowLogic<BigDecimal> {
                     queryCriteria, pageSpec);
             totalResults = results.getTotalStatesAvailable();
             if (totalResults == 0)
-                return new BigDecimal(0d);
+                return BigDecimal.valueOf(0);
             List<StateAndRef<FungibleToken>> pageMyTokens = results.getStates();
             // Is it possible the below line is behaving randomly?
             long pageBalance = pageMyTokens.stream()
@@ -63,9 +63,9 @@ public class GetNodeBalance extends FlowLogic<BigDecimal> {
         }
         while ((pageSize * (pageNumber - 1) <= totalResults));
 
-        BigDecimal bigTotalBalance = new BigDecimal(totalBalance);
+        BigDecimal bigTotalBalance = BigDecimal.valueOf(totalBalance);
         // Shoken has 6 fraction digits; meaning 1000,000 = one Shoken.
-        BigDecimal fractions = new BigDecimal(Math.pow(10, token.getFractionDigits()));
+        BigDecimal fractions = BigDecimal.valueOf(Math.pow(10, token.getFractionDigits()));
         BigDecimal accountBalance = bigTotalBalance.divide(fractions);
         return accountBalance;
     }
