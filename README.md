@@ -8,5 +8,6 @@ This repository shows an example for this issue: https://github.com/corda/token-
    * Deploy the node: `./gradlew deployNodes`
    * Browse to the node: `cd buil/nodes/PartyA`
    * Start the node: `java -jar corda.jar`
+   * Mint tokens: `start MintFixedToken`
    * Start the webserver: `./gradlew runTemplateServer`
    * Call API in Postman: `http://localhost:10050/node-balance`
