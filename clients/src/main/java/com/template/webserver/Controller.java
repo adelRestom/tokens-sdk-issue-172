@@ -35,7 +35,7 @@ public class Controller {
     }
 
     @GetMapping(value = "/node-balance", produces = MediaType.APPLICATION_JSON_VALUE)
-    private ResponseEntity<Map<String, BigDecimal>> getNodeBalance() {
+    private ResponseEntity<Map<String, Double>> getNodeBalance() {
         TokenType token = new TokenType("MyToken", 6);
         QueryCriteria queryCriteria = QueryUtilitiesKt.heldTokenAmountCriteria(
                 token, proxy.nodeInfo().getLegalIdentities().get(0));
@@ -51,7 +51,7 @@ public class Controller {
                     queryCriteria, pageSpec);
             totalResults = results.getTotalStatesAvailable();
             if (totalResults == 0)
-                return ResponseEntity.ok().body(Collections.singletonMap("Node Balance", BigDecimal.valueOf(0)));
+                return ResponseEntity.ok().body(Collections.singletonMap("Node Balance", 0d));
             List<StateAndRef<FungibleToken>> pageMyTokens = results.getStates();
             // Is it possible the below line is behaving randomly?
             long pageBalance = pageMyTokens.stream()
@@ -65,6 +65,6 @@ public class Controller {
         // Shoken has 6 fraction digits; meaning 1000,000 = one Shoken.
         BigDecimal fractions = BigDecimal.valueOf(Math.pow(10, token.getFractionDigits()));
         BigDecimal accountBalance = bigTotalBalance.divide(fractions);
-        return ResponseEntity.ok().body(Collections.singletonMap("Node Balance", accountBalance));
+        return ResponseEntity.ok().body(Collections.singletonMap("Node Balance", accountBalance.doubleValue()));
     }
 }

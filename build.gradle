@@ -113,6 +113,12 @@ dependencies {
     cordapp "$tokens_release_group:tokens-workflows:$tokens_release_version"
     cordapp "$tokens_release_group:tokens-money:$tokens_release_version"
     cordapp "$tokens_release_group:tokens-selection:$tokens_release_version"
+
+    // Accounts library.
+    cordapp("$accounts_release_group:accounts-contracts:$accounts_release_version")
+    cordapp("$accounts_release_group:accounts-workflows:$accounts_release_version")
+    // Confidential Id's.
+    cordapp "$confidential_id_release_group:ci-workflows:$confidential_id_release_version"
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
@@ -130,6 +136,11 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         cordapp("$tokens_release_group:tokens-workflows:$tokens_release_version")
         cordapp("$tokens_release_group:tokens-money:$tokens_release_version")
         cordapp("$tokens_release_group:tokens-selection:$tokens_release_version")
+        // Accounts library.
+        cordapp("$accounts_release_group:accounts-contracts:$accounts_release_version")
+        cordapp("$accounts_release_group:accounts-workflows:$accounts_release_version")
+        // Confidential Id's.
+        cordapp "$confidential_id_release_group:ci-workflows:$confidential_id_release_version"
     }
     node {
         name "O=Notary,L=London,C=GB"
@@ -142,7 +153,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         cordapps = []
     }
     node {
-        name "O=PartyA,L=London,C=GB"
+        name "O=Mint,L=London,C=GB"
         p2pPort 10005
         rpcSettings {
             address("localhost:10006")
@@ -150,15 +161,34 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         }
         rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
 
-        //extraConfig = ['h2Settings.address' : 'localhost:10090']
-        extraConfig = [
+        extraConfig = ['h2Settings.address' : 'localhost:10090']
+        /*extraConfig = [
                 'dataSourceProperties.dataSourceClassName' : 'org.postgresql.ds.PGSimpleDataSource',
                 'dataSourceProperties.dataSource.url' : 'jdbc:postgresql://localhost:5432/test',
-                'dataSourceProperties.dataSource.user' : 'party_a',
-                'dataSourceProperties.dataSource.password' : 'party_a',
+                'dataSourceProperties.dataSource.user' : 'mint',
+                'dataSourceProperties.dataSource.password' : 'mint',
                 'database.transactionIsolationLevel' : 'READ_COMMITTED',
                 'database.initialiseSchema' : 'true'
-        ]
+        ]*/
+    }
+    node {
+        name "O=Wallet,L=London,C=GB"
+        p2pPort 10007
+        rpcSettings {
+            address("localhost:10008")
+            adminAddress("localhost:10047")
+        }
+        rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
+
+        extraConfig = ['h2Settings.address' : 'localhost:10091']
+        /*extraConfig = [
+                'dataSourceProperties.dataSourceClassName' : 'org.postgresql.ds.PGSimpleDataSource',
+                'dataSourceProperties.dataSource.url' : 'jdbc:postgresql://localhost:5432/test',
+                'dataSourceProperties.dataSource.user' : 'wallet',
+                'dataSourceProperties.dataSource.password' : 'wallet',
+                'database.transactionIsolationLevel' : 'READ_COMMITTED',
+                'database.initialiseSchema' : 'true'
+        ]*/
     }
 }
 

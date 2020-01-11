@@ -45,7 +45,7 @@ public class MintFixedToken extends FlowLogic<SignedTransaction> {
                     TransactionUtilitiesKt.getAttachmentIdForGenericParam(token));
             tokens.add(fungibleToken);
         }
-        // We will issue another 200 tokens in smaller quantities, so we can have some fractions.
+        // We will issue more tokens but in smaller quantities, so we can have some fractions.
         int sum = 0;
         for (int i=1; i<=78; i++) {
             // Notice here I'm not using "AmountUtilitiesKt.amount".
