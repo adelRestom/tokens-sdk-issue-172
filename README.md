@@ -1,4 +1,19 @@
-Initially this was for issue https://github.com/corda/token-sdk/issues/172
+Steps for issue: https://github.com/corda/accounts/issues/85
+
+* Deploy the nodes: `./gradlew deployNodes`
+* Browse to the nodes (Notary, Mint, and Wallet): `cd build/nodes/`
+* Start all nodes (Notary, Mint, and Wallet): `java -jar corda.jar`
+* Inside **Mint** terminal Mint tokens: `start MintFixedToken`. This will mint 800.867681.
+* Inside **Mint** terminal Issue tokens: `start IssueFixedToken`. This will issue 0.867681 to an **Account123** on Wallet node.
+* Open the H2 database: `cd /bin/h2/bin`, `sh h2.sh`, the DB port for Wallet node is 10091
+
+You will see that the account is created inside `accounts` table, and the token is inside `fungible_token` table, but the `account_to_state_refs` table is empty.
+The logs didn't show any errors.  
+  
+<br>
+<br>    
+  
+Initially this repository was for issue https://github.com/corda/token-sdk/issues/172
 which I closed, and reopened under Corda repo https://github.com/corda/corda/issues/5853
 
 1. Sadly I wasn't able to replicate the issue.
