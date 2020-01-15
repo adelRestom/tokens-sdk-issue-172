@@ -3,16 +3,15 @@ package com.template.flows;
 import co.paralleluniverse.fibers.Suspendable;
 import com.r3.corda.lib.accounts.contracts.states.AccountInfo;
 import com.r3.corda.lib.accounts.workflows.flows.CreateAccount;
+import com.r3.corda.lib.accounts.workflows.flows.RequestKeyForAccountFlow;
+import com.r3.corda.lib.accounts.workflows.flows.SendKeyForAccountFlow;
 import com.r3.corda.lib.accounts.workflows.services.KeyManagementBackedAccountService;
-import com.r3.corda.lib.ci.workflows.ProvideKeyFlow;
-import com.r3.corda.lib.ci.workflows.RequestKeyFlow;
 import net.corda.core.contracts.StateAndRef;
 import net.corda.core.flows.*;
 import net.corda.core.identity.AnonymousParty;
 import net.corda.core.identity.Party;
 import net.corda.core.serialization.CordaSerializable;
 
-import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,7 +23,7 @@ public class RequestKeyForAccountByName {
 
         private final Party host;
         private final String name;
-        // This flag will be set to true only by IssueFixedToken flow to create any account that doesn't exist.
+        // This flag will be set to true only by IssueTokens flow to create any Finablr Id account that doesn't exist.
         private final boolean createMissingAccount;
 
         public Initiator(Party host, String name) {
@@ -33,7 +32,7 @@ public class RequestKeyForAccountByName {
             this.createMissingAccount = false;
         }
 
-        // This constructor is to be used only by IssueFixedToken flow.
+        // This constructor is to be used only by IssueTokens flow.
         public Initiator(Party host, String name, boolean createMissingAccount) {
             this.host = host;
             this.name = name;
@@ -43,46 +42,35 @@ public class RequestKeyForAccountByName {
         @Override
         @Suspendable
         public AnonymousParty call() throws FlowException {
+            FlowSession hostSession = initiateFlow(host);
+            StateAndRef<AccountInfo> accountStateAndRef;
             // If the account is hosted on the initiating node; we can fetch it with the identity service locally.
             if (host.equals(getOurIdentity())) {
-                List accounts = getServiceHub()
+                List<StateAndRef<AccountInfo>> accounts = getServiceHub()
                         .cordaService(KeyManagementBackedAccountService.class).accountInfo(name);
                 // Accounts library allows by design to have multiple accounts with the same "name"
                 // but different "host"; we need to make sure that we only get the one that is hosted by us.
-                StateAndRef<AccountInfo> accountStateAndRef = (StateAndRef<AccountInfo>)accounts.stream()
-                        .filter(acc -> ((StateAndRef<AccountInfo>)acc).getState().getData().getHost()
-                                .equals(getOurIdentity()))
-                        .findAny()
-                        .orElse(null);
+                accountStateAndRef = accounts.stream()
+                        .filter(acc -> acc.getState().getData().getHost().equals(getOurIdentity()))
+                        .findAny().orElse(null);
                 // If the account is not found.
                 if (accountStateAndRef == null) {
                     if (createMissingAccount) {
-                        accountStateAndRef = (StateAndRef<AccountInfo>)subFlow(new CreateAccount(name));
+                        accountStateAndRef = (StateAndRef<AccountInfo>) subFlow(new CreateAccount(name));
                     }
                     else
                         throw new FlowException("Account "+name+" not found.");
                 }
-                // Generate a key and register it with the identity service locally.
-                PublicKey newKey = getServiceHub().getKeyManagementService().freshKey(accountStateAndRef.getState().getData()
-                        .getIdentifier().getId());
-                // AnonymousParty identifies a certain account because it only contains the public key,
-                // unlike Party which contains the CordaX500 name (that identifies the node) and the public key.
-                return new AnonymousParty(newKey);
             }
             else {
-                FlowSession hostSession = initiateFlow(host);
                 // Return the account from the host node.
-                List result = hostSession.sendAndReceive(List.class,
+                List<StateAndRef<AccountInfo>> result = hostSession.sendAndReceive(List.class,
                         new FlowParams(name, createMissingAccount)).unwrap(it -> it);
                 if (result.size() == 0)
                     throw new FlowException("Account "+name+" not found.");
-                // Request a new key from the host node.
-                StateAndRef<AccountInfo> accountStateAndRef = (StateAndRef<AccountInfo>)result.get(0);
-                PublicKey newKey = subFlow(new RequestKeyFlow(hostSession, accountStateAndRef.getState().getData()
-                        .getIdentifier().getId()))
-                        .getOwningKey();
-                return new AnonymousParty(newKey);
+                accountStateAndRef = result.get(0);
             }
+            return subFlow(new RequestKeyForAccountFlow(accountStateAndRef.getState().getData(), hostSession));
         }
     }
 
@@ -102,24 +90,24 @@ public class RequestKeyForAccountByName {
             if (otherPartySession.getCounterparty().equals(getOurIdentity()))
                 return null;
             FlowParams params = otherPartySession.receive(FlowParams.class).unwrap(it -> it);
-            List accounts = getServiceHub()
+            List<StateAndRef<AccountInfo>> accounts = getServiceHub()
                     .cordaService(KeyManagementBackedAccountService.class).accountInfo(params.name);
-            StateAndRef<AccountInfo> accountStateAndRef = (StateAndRef<AccountInfo>)accounts.stream()
-                    .filter(acc -> ((StateAndRef<AccountInfo>)acc).getState().getData().getHost()
-                            .equals(getOurIdentity()))
-                    .findAny()
-                    .orElse(null);
-            List result = new ArrayList();
+            // Accounts library allows by design to have multiple accounts with the same "name"
+            // but different "host"; we need to make sure that we only get the one that is hosted by us.
+            StateAndRef<AccountInfo> accountStateAndRef = accounts.stream()
+                    .filter(acc -> acc.getState().getData().getHost().equals(getOurIdentity()))
+                    .findAny().orElse(null);
+            List<StateAndRef<AccountInfo>> result = new ArrayList<>();
             if (accountStateAndRef != null)
                 result.add(accountStateAndRef);
             else {
                 if (params.createMissingAccount) {
-                    accountStateAndRef = (StateAndRef<AccountInfo>)subFlow(new CreateAccount(params.name));
+                    accountStateAndRef = (StateAndRef<AccountInfo>) subFlow(new CreateAccount(params.name));
                     result.add(accountStateAndRef);
                 }
             }
             otherPartySession.send(result);
-            subFlow(new ProvideKeyFlow(otherPartySession));
+            subFlow(new SendKeyForAccountFlow(otherPartySession));
             return null;
         }
     }
